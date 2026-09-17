@@ -1,0 +1,196 @@
+name: Regulatory Watch
+
+# 8am BRITISH time, all year round.
+#
+# GitHub cron is UTC only, so "8am in Britain" is 07:00 UTC during BST and
+# 08:00 UTC during GMT. A single cron cannot follow the clock change. So both
+# fire, and the gate job below lets exactly one through — whichever is actually
+# 08:xx in Europe/London on the day.
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 08:00 London while BST (late Mar - late Oct)
+    - cron: "0 8 * * *"   # 08:00 London while GMT (late Oct - late Mar)
+  workflow_dispatch:
+    inputs:
+      quiet:
+        description: "Re-baseline: store snapshots WITHOUT emailing. Use after any config or filter change."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: regulatory-watch
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - id: check
+        run: |
+          HOUR=$(TZ=Europe/London date +%H)
+          echo "London time now: $(TZ=Europe/London date '+%Y-%m-%d %H:%M %Z')"
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run - proceeding."
+          elif [ "$HOUR" = "08" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "It is 08:xx in London - this is the run that counts."
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "It is $HOUR:xx in London, not 08 - the other cron covers today."
+          fi
+
+  validate:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate the job list, the config and the renderer
+        run: |
+          set -o pipefail
+          python - <<'PY'
+          import yaml, collections
+          docs = [d for d in yaml.safe_load_all(open("urls.yaml", encoding="utf-8")) if d]
+          assert len(docs) == 218, "expected 218 jobs, found %d" % len(docs)
+          locs = [d.get("url") or d.get("navigate") for d in docs]
+          assert all(locs), "a job has no url/navigate key"
+          dupes = sorted(u for u, c in collections.Counter(locs).items() if c > 1)
+          assert not dupes, "urlwatch will refuse to start - duplicate locations: %r" % dupes
+          names = [d.get("name") for d in docs]
+          nd = [n for n, c in collections.Counter(names).items() if c > 1]
+          assert not nd, "duplicate job names: %r" % nd[:5]
+          br = [d for d in docs if d.get("navigate")]
+          for d in br:
+              assert d.get("wait_until") == "load", "browser job on networkidle: %s" % d["name"]
+              assert d.get("wait_for"), "browser job with no wait_for: %s" % d["name"]
+          for vid in (2913455, 6514863, 6840788, 7280329, 7937745):
+              assert any(str(n).startswith(str(vid)) for n in names), \
+                  "recovered source %s is missing again" % vid
+          c = yaml.safe_load(open("urlwatch.yaml", encoding="utf-8"))
+          assert c["display"]["new"] is False, "baseline guard missing"
+          assert c["report"]["text"]["footer"] is False, "footers must stay off"
+          for kind in ("url", "browser"):
+              assert c["job_defaults"][kind].get("useragent"), "%s jobs need a useragent" % kind
+          print("OK: %d jobs, %d browser jobs, config sane" % (len(docs), len(br)))
+          PY
+          python -m py_compile tools/render_page.py
+          echo "renderer compiles"
+
+  watch:
+    needs: [gate, validate]
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install the pinned engine
+        run: |
+          set -o pipefail
+          pip install \
+            urlwatch==2.29 \
+            playwright==1.63.0 \
+            minidb==2.0.8 \
+            pyyaml==6.0.3 \
+            requests==2.34.2 \
+            keyring==25.7.0 2>&1 | tail -3
+          python -m playwright install --with-deps chromium 2>&1 | tail -2
+
+      - name: Run urlwatch
+        # pipefail, or a crash is masked by tee succeeding and the run reads as
+        # clean. "|| true" because urlwatch exits non-zero when ANY job errors,
+        # which is information rather than a broken run - the page and the
+        # summary both report those errors.
+        run: |
+          set -o pipefail
+          touch cache.db
+          urlwatch --config urlwatch.yaml --urls urls.yaml --cache cache.db \
+            2>&1 | tee last-report.txt || true
+          echo "urlwatch exit code: ${PIPESTATUS[0]}"
+          echo "report bytes: $(wc -c < last-report.txt)"
+
+      - name: Build the page
+        if: always()
+        run: python tools/render_page.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Email on changes
+        # A GitHub issue emails the repository owner automatically, so no SMTP
+        # credentials need to exist in this repo at all.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUIET: ${{ inputs.quiet }}
+        run: |
+          if [ "$QUIET" = "true" ]; then
+            echo "Re-baseline run: snapshots stored, no email sent."
+            exit 0
+          fi
+          if [ ! -s last-report.txt ] || ! grep -q '[^[:space:]]' last-report.txt; then
+            echo "Nothing changed. No issue, no email."
+            exit 0
+          fi
+          CHANGED=$(grep -c 'CHANGED:' last-report.txt || true)
+          ERRORS=$(grep -c 'ERROR:' last-report.txt || true)
+          {
+            echo "Regulatory watch - $(TZ=Europe/London date '+%A %d %B %Y, %H:%M %Z')"
+            echo ""
+            echo "- Sources changed: ${CHANGED}"
+            echo "- Sources erroring: ${ERRORS}"
+            echo ""
+            echo "Full results: https://gettersi.github.io/${GITHUB_REPOSITORY#*/}/"
+            echo ""
+            echo '```'
+            head -c 55000 last-report.txt
+            echo ''
+            echo '```'
+          } > issue-body.md
+          gh issue create \
+            --title "Regulatory watch $(TZ=Europe/London date +%Y-%m-%d) - ${CHANGED} changed, ${ERRORS} erroring" \
+            --body-file issue-body.md
+
+      - name: Save the cache, page and report
+        # if: always() so a run can never alert and then throw away the state
+        # the alert was based on.
+        if: always()
+        run: |
+          set -o pipefail
+          git config user.name  "regulatory-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            for f in cache.db index.html last-report.txt; do
+              cp -f "$f" "/tmp/$f" 2>/dev/null || true
+            done
+            git reset --hard origin/main
+            for f in cache.db index.html last-report.txt; do
+              cp -f "/tmp/$f" "$f" 2>/dev/null || true
+            done
+            git add cache.db index.html last-report.txt 2>/dev/null || true
+            if git diff --quiet --cached; then
+              echo "Nothing to commit."
+              exit 0
+            fi
+            git commit -m "Watch run: $(TZ=Europe/London date +%Y-%m-%d)"
+            if git push; then
+              echo "Saved on attempt ${attempt}."
+              exit 0
+            fi
+            echo "Push rejected, retrying (${attempt}/3)."
+            sleep 5
+          done
+          echo "::error::Could not push after 3 attempts. This run's state was NOT saved."
+          exit 1
