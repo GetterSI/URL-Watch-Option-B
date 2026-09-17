@@ -1,1 +1,76 @@
+# urlwatch.yaml — global configuration for the SI regulatory watch.
+#
+# Thin by design. Everything that can be a global default lives here so the
+# 218 jobs in urls.yaml carry only what is unique to them. The fetch-and-diff
+# engine is upstream urlwatch (BSD-3), installed and pinned — not forked — so
+# fixes from its maintainers arrive without us maintaining anything.
 
+display:
+  # THE BASELINE GUARD. The first run stores a snapshot for all 218 jobs. With
+  # new: true that run would report 218 "new" pages, which is noise.
+  #
+  # This also matters for any later change to filters or fetch settings: such a
+  # change rewrites stored content, which reads as a change on every affected
+  # row. Run the workflow once with the "quiet" input after any such change
+  # (see watch.yml) and the transition is absorbed silently. Four alert bursts
+  # on the previous monitor came from not having this.
+  new: false
+  error: true          # but only after max_tries consecutive failures
+  unchanged: false     # no "nothing happened" lines every morning
+  empty-diff: false    # a change filtered down to nothing is not a change
+
+report:
+  # stdout is what the workflow captures. Footers OFF is load-bearing: with
+  # unchanged and new both false, a run with no changes then produces an EMPTY
+  # report, and "is there anything to say?" becomes "is the report non-empty?".
+  stdout:
+    enabled: true
+    color: false
+  text:
+    line_length: 100
+    details: true
+    footer: false
+    minimal: false
+  markdown:
+    details: true
+    footer: false
+    minimal: false
+  html:
+    diff: unified
+  # No SMTP anywhere. Notification is a GitHub issue opened by the workflow,
+  # which GitHub emails to the repository owner automatically. So no mail
+  # credentials exist in this repo to leak or expire.
+  email:
+    enabled: false
+
+job_defaults:
+  all:
+    # "After this many sequential failed runs, the error will be reported
+    # rather than ignored." Two swallows a one-off timeout and still surfaces
+    # a real outage.
+    max_tries: 2
+
+  url:
+    # A real browser User-Agent. Without one, std.iec.ch returns a CloudFront
+    # 403 "Request blocked" and other hosts refuse outright — measured, not
+    # assumed.
+    useragent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    filter:
+      - html2text      # without this every diff is raw markup
+      - strip          # so cosmetic whitespace reflow is not a change
+    # Strip per-request tokens BEFORE comparison. Block and challenge pages
+    # embed an id that differs on every fetch (Azure WAF azureRef, CloudFront
+    # Request ID, Cloudflare Ray ID). Left in, such a row reports a change
+    # every single run forever.
+      - re.sub:
+          pattern: "[0-9a-f]{32}"
+          repl: "[token]"
+
+  browser:
+    useragent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    filter:
+      - html2text
+      - strip
+      - re.sub:
+          pattern: "[0-9a-f]{32}"
+          repl: "[token]"
