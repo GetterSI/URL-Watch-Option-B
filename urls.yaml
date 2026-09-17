@@ -1,1 +1,941 @@
+# urls.yaml — urlwatch jobs for the Source Intelligence regulatory watchlist.
+#
+# Built 2026-09-17 from "Visual Ping Sources.xlsx" (export dated 2026-08-11,
+# user consultancy@sourceintel.com) — ALL 218 sources.
+#
+# The earlier monitors watched 213. Five sources had been dropped in an earlier
+# normalisation and were never checked by anything:
+#   2913455  Fost Plus — What does it cost?        (Belgian packaging fees)
+#   6514863  Recycle BC — Reporting & Fees
+#   6840788  Procircular news and webinars
+#   7280329  Türkiye RoHS gazette
+#   7937745  Netherlands Textiles EPR Regulation
+# They are included here.
+#
+# Job names begin with the Visualping ID so any alert traces straight back to
+# the export; tags carry vp-<id> for filtering.
+#
+# Global settings — user agent, filters, retries — live in urlwatch.yaml under
+# job_defaults, not repeated 218 times here.
+#
+# BROWSER JOBS use Playwright only where there is MEASURED evidence a plain
+# fetch is not enough: CIRCABC (Angular app), ECHA (Azure WAF interstitial),
+# std.iec.ch (content inside a frame). Each waits for a selector that exists
+# only once real content has rendered — NOT for "networkidle", which
+# urlwatch’s own docs call discouraged and which caused an earlier attempt to
+# store WAF challenge pages as though they were content. If a challenge is
+# still up the selector never appears and the job FAILS VISIBLY. A visible
+# failure is recoverable; a plausible fake is not.
+#
+# Selectors end ">> nth=0" because Playwright locators are strict: a selector
+# matching several elements raises "strict mode violation".
+#
+# DEDUPE: urlwatch refuses to start if two jobs share a location and documents
+# the remedy itself — append #1, #2. Three URLs appear twice in the export; the
+# second of each carries #2. Fragments are never sent to a server.
 
+name: "2913449 — - Afvalfonds verpakkingen"
+url: "https://www.afvalfondsverpakkingen.nl/en/node/450"
+tags: [ "vp-2913449" ]
+---
+name: "2913452 — Contributions | Bebat"
+url: "https://www.bebat.be/en/b2b/contributions"
+tags: [ "vp-2913452" ]
+---
+name: "2913455 — What does it cost? | Fost Plus"
+url: "https://www.fostplus.be/en/enterprises/becoming-fost-plus-member/what-does-it-cost"
+tags: [ "vp-2913455" ]
+---
+name: "2913461 — Appliance list - Recupel"
+url: "https://www.recupel.be/en/appliance-list/#"
+tags: [ "vp-2913461" ]
+---
+name: "2913465 — Not yet a client | Valipac"
+url: "https://www.valipac.be/en/not-yet-a-client/"
+tags: [ "vp-2913465" ]
+---
+name: "2913466 — Product Definitions, Fees & Clarification Protocols EPRA | ARPE | Electronic Products Recycling Association | Association pour le recyclage des produits lectroniques"
+url: "https://epra.ca/what-is-a-steward/product-definitions-fees-clarification-protocols"
+tags: [ "vp-2913466" ]
+---
+name: "2913472 — Tariffs"
+url: "https://www.swico.ch/en/recycling/basics/tariffs/"
+tags: [ "vp-2913472" ]
+---
+name: "2913474 — Fees | EKO-KOM"
+url: "https://www.ekokom.cz/en/clients/fees"
+tags: [ "vp-2913474" ]
+---
+name: "2913475 — Quarterly statements | EKO-KOM"
+url: "https://www.ekokom.cz/en/clients/quarterly-statements"
+tags: [ "vp-2913475" ]
+---
+name: "2913482 — Electronic Supplier & Seller Recycling Registration | Alberta Recycling"
+url: "https://www.albertarecycling.ca/suppliers/electronic-suppliers/"
+tags: [ "vp-2913482" ]
+---
+name: "2913484 — Sociedade Ponto Verde"
+url: "https://www.pontoverde.pt/aderentes/2_1_valor_a_pagar.php"
+tags: [ "vp-2913484" ]
+---
+name: "2913486 — Gertearten"
+url: "https://www.stiftung-ear.de/de/themen/elektrog/herstellerbevollmaechtigte/kategorien/geraetearten"
+tags: [ "vp-2913486" ]
+---
+name: "2913496 — Authorisation List - ECHA"
+navigate: "https://echa.europa.eu/authorisation-list"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-2913496" ]
+---
+name: "2913504 — Fees ERP Portugal - EN"
+url: "https://erp-recycling.org/en-pt/fees/"
+tags: [ "vp-2913504" ]
+---
+name: "2913511 — Environmental contribution"
+url: "http://www.conai.org/en/businesses/environmental-contribution/"
+tags: [ "vp-2913511" ]
+---
+name: "2913512 — The Japan Containers and Packaging Recycling Association"
+url: "https://www.jcpra.or.jp/english/tabid/603/index.php"
+tags: [ "vp-2913512" ]
+---
+name: "2913514 — List of EEEs and fees | Ecotrel"
+url: "https://www.ecotrel.lu/en/professional/list-of-ee-es-and-fees"
+tags: [ "vp-2913514" ]
+---
+name: "2913531 — ARA >Tarife"
+url: "https://www.ara.at/leistungen-angebote/entpflichtungsservice/verpackungsentpflichtung/tarife"
+tags: [ "vp-2913531" ]
+---
+name: "2913537 — https://www.ecobatterien.lu/volumes/files/en_eb_listepile.pdf"
+url: "https://www.ecobatterien.lu/volumes/files/en_eb_listepile.pdf"
+tags: [ "vp-2913537" ]
+---
+name: "2913540 — NWT Electronics Recycling Program | Alberta Recycling"
+url: "https://www.albertarecycling.ca/nwt-recycling-program/"
+tags: [ "vp-2913540" ]
+---
+name: "2913544 — Recycle Yukon Electronics"
+url: "http://recycleyukonelectronics.ca/"
+tags: [ "vp-2913544" ]
+---
+name: "2913546 — WEEE Fees"
+url: "https://www.dpa-system.dk/en/WEEE/Producers/Economy/Fees"
+tags: [ "vp-2913546" ]
+---
+name: "2913547 — DPA Fees"
+url: "https://producentansvar.dk/"
+tags: [ "vp-2913547" ]
+---
+name: "2913555 — Packaging Fees | Green Dot Cyprus"
+url: "http://greendot.com.cy/en/business/packaging-fees"
+tags: [ "vp-2913555" ]
+---
+name: "2913569 — Tarifs et dfinitions des produits soumis Auvibel"
+url: "http://www.auvibel.be/fr/remuneration/tarifs"
+tags: [ "vp-2913569" ]
+---
+name: "2913570 — Speichermedienvergtung AKM austromechana"
+url: "https://www.akm.at/musiknutzende/speichermedienverguetung/"
+tags: [ "vp-2913570" ]
+---
+name: "2913572 — Aktuelles"
+url: "https://www.zpue.de/aktuelles.html"
+tags: [ "vp-2913572" ]
+---
+name: "2913579 — Tarieven | Opgave | Stichting Thuiskopie"
+url: "https://www.thuiskopie.nl/nl/opgave/tarieven"
+tags: [ "vp-2913579" ]
+---
+name: "2913582 — Procedura de achitare a remuneraiei pentru copia privat UPFR"
+url: "https://upfr.ro/procedura-de-achitare-a-remuneratiei-pentru-copia-privata/"
+tags: [ "vp-2913582" ]
+---
+name: "2913586 — Ventanilla Unica digital tariffs"
+url: "https://www.ventanillaunica.digital/VU_Tarifas.aspx"
+tags: [ "vp-2913586" ]
+---
+name: "2913587 — Gemeinsamer Tarif 4i - SUISA"
+url: "https://www.suisa.ch/de/kunden/leertraegerverguetung/leertraegertarife/gemeinsamer-tarif-4i.html"
+tags: [ "vp-2913587" ]
+---
+name: "2913590 — Batteries - Environment - European Commission"
+url: "https://ec.europa.eu/environment/waste/batteries/legislation.htm"
+tags: [ "vp-2913590" ]
+---
+name: "2948414 — Service fees ETO - MT Eesti Taaskasutusorganisatsioon"
+url: "https://www.eto.ee/en/producerimporter/service-fees/"
+tags: [ "vp-2948414" ]
+---
+name: "3021904 — Tarifa - Artisjus"
+url: "https://www.artisjus.hu/felhasznaloknak/maganmasolasi-dij/tarifa-10/"
+tags: [ "vp-3021904" ]
+---
+name: "3030907 — Nyomtatvny - Artisjus"
+url: "https://www.artisjus.hu/felhasznaloknak/maganmasolasi-dij/nyomtatvany-11/"
+tags: [ "vp-3030907" ]
+---
+name: "3033758 — BlyBatteriRetur | taganden"
+url: "https://blybatteriretur.se/producent/ataganden/"
+tags: [ "vp-3033758" ]
+---
+name: "3053367 — Ressources documentaires Screlec"
+url: "https://www.screlec.fr/ressources-documentaires/"
+tags: [ "vp-3053367" ]
+---
+name: "3082893 — Critical raw materials | Internal Market, Industry, Entrepreneurship and SMEs"
+url: "https://ec.europa.eu/growth/sectors/raw-materials/specific-interest/critical_en"
+tags: [ "vp-3082893" ]
+---
+name: "3091428 — https://www.era-gmbh.at/downloads"
+url: "https://www.era-gmbh.at/downloads"
+tags: [ "vp-3091428" ]
+---
+name: "3113865 — Good Delivery Current List | LBMA"
+url: "https://www.lbma.org.uk/good-delivery/gold-current-list"
+tags: [ "vp-3113865" ]
+---
+name: "3120039 — List of substances subject to POPs Regulation - ECHA"
+navigate: "https://echa.europa.eu/list-of-substances-subject-to-pops-regulation"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-3120039" ]
+---
+name: "3155476 — Stichting OPEN - Producten- en tarievenlijst"
+url: "https://my.stichting-open.org/productlist-external"
+tags: [ "vp-3155476" ]
+---
+name: "3164928 — -"
+url: "https://www.ecommunity-erp.co.il/%d7%99%d7%a6%d7%a8%d7%a0%d7%99%d7%9d-%d7%95%d7%99%d7%91%d7%95%d7%90%d7%a0%d7%99%d7%9d/%d7%98%d7%91%d7%9c%d7%aa-%d7%93%d7%9e%d7%99-%d7%98%d7%99%d7%a4%d7%95%d7%9c/"
+tags: [ "vp-3164928" ]
+---
+name: "3443014 — English"
+url: "https://www.era-gmbh.at/en/meta/downloads/"
+tags: [ "vp-3443014" ]
+---
+name: "3443194 — Metteurs sur le marché | Corepile"
+url: "https://www.corepile.fr/vous-etes/metteurs-sur-le-marche/"
+tags: [ "vp-3443194" ]
+---
+name: "3443208 — Tarife – Eco-Rom Ambalaje"
+url: "http://ecoromambalaje.ro/informatii-publice/tarife/"
+tags: [ "vp-3443208" ]
+---
+name: "3450181 — Croatia WEEE/Batteries/Packaging fees & regulations"
+url: "https://www.fzoeu.hr/hr/naknada-za-ambalazu-i-ambalazni-otpad/1407"
+tags: [ "vp-3450181" ]
+---
+name: "3450204 — Croatia WEEE, Packaging & Batteries fees & regulations"
+url: "https://www.fzoeu.hr/hr/naknada-gospodarenja-otpadnim-baterijama-i-akumulatorima/1415"
+tags: [ "vp-3450204" ]
+---
+name: "3450272 — Croatia Packaging WEEE Batteries"
+url: "https://www.fzoeu.hr/hr/naknada-gospodarenja-ee-otpadom/1419"
+tags: [ "vp-3450272" ]
+---
+name: "3504510 — Table of harmonised entries in Annex VI to CLP - ECHA"
+navigate: "https://echa.europa.eu/information-on-chemicals/annex-vi-to-clp"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-3504510" ]
+---
+name: "3644897 — SB 657 Home Page | State of California - Department of Justice - Office of the Attorney General"
+url: "https://oag.ca.gov/SB657"
+tags: [ "vp-3644897" ]
+---
+name: "3705456 — Ecologic"
+url: "https://www.ecologic-france.com/professionnels/eco-contribution-deee-dea-2018-19.html"
+tags: [ "vp-3705456" ]
+---
+name: "3763091 — Décret n° 2022-748 du 29 avril 2022 relatif à l'information du consommateur sur les qualités et caractéristiques environnementales des produits générateurs de déchets - Légifrance"
+url: "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000045726094"
+tags: [ "vp-3763091" ]
+---
+name: "4223573 — Candidate List of substances of very high concern for Authorisation - ECHA"
+navigate: "https://echa.europa.eu/candidate-list-table"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-4223573" ]
+---
+name: "4255902 — IAEG - Aerospace and Defense Declarable Substances List"
+url: "https://www.iaeg.com/chemicalrpt/addsl/"
+tags: [ "vp-4255902" ]
+---
+name: "4324364 — Extended Producer Responsibility - EPR - Polyco"
+url: "https://www.polyco.co.za/extended-producer-responsibility/"
+tags: [ "vp-4324364" ]
+---
+name: "4431158 — Extended Producer Responsibility Fees - Fibre Circle"
+url: "https://fibrecircle.co.za/epr-fees/"
+tags: [ "vp-4431158" ]
+---
+name: "4493282 — FAOLEX Database | Food and Agriculture Organization of the United Nations"
+url: "https://www.fao.org/faolex/en"
+tags: [ "vp-4493282" ]
+---
+name: "4538802 — Implementation of the RoHS Directive"
+url: "https://environment.ec.europa.eu/topics/waste-and-recycling/rohs-directive/implementation-rohs-directive_en"
+tags: [ "vp-4538802" ]
+---
+name: "4662311 — Ventanilla Unica digital reporting template"
+url: "https://www.ventanillaunica.digital/VU_Liquidaciones_Plantillas3T2023.aspx"
+tags: [ "vp-4662311" ]
+---
+name: "4710970 — CompTox Chemicals Dashboard"
+url: "https://comptox.epa.gov/dashboard/chemical-lists/PFASSTRUCT"
+tags: [ "vp-4710970" ]
+---
+name: "4710971 — CompTox Chemicals Dashboard"
+url: "https://comptox.epa.gov/dashboard/chemical-lists/PFASDEV"
+tags: [ "vp-4710971" ]
+---
+name: "4758267 — Retela.cz » Current clients"
+url: "https://www.retela.cz/en/importers-producers/"
+tags: [ "vp-4758267" ]
+---
+name: "4910107 — Tapkite organizacijos nariu | Žaliasis taškas"
+url: "https://www.zaliasistaskas.lt/tapkite-organizacijos-nariu/"
+tags: [ "vp-4910107" ]
+---
+name: "4948810 — Copia Privata"
+url: "https://www.siae.it/it/cosa-facciamo/altri-servizi/copia-privata/"
+tags: [ "vp-4948810" ]
+---
+name: "4965563 — Deforestation FAQs"
+navigate: "https://circabc.europa.eu/ui/group/34861680-e799-4d7c-bbad-da83c45da458/library/e126f816-844b-41a9-89ef-cb2a33b6aa56/details"
+wait_until: load
+wait_for: "main >> nth=0"
+tags: [ "vp-4965563" ]
+---
+name: "5096022 — Fee Schedule - Call2Recycle® | Canada Call2Recycle® | Canada"
+url: "https://www.call2recycle.ca/fee-schedule/"
+tags: [ "vp-5096022" ]
+---
+name: "5097250 — Prices | Vana DK"
+url: "https://www.vana.dk/en/producer-responsibility/prices/"
+tags: [ "vp-5097250" ]
+---
+name: "5100065 — CompTox Chemicals Dashboard"
+url: "https://comptox.epa.gov/dashboard/chemical-lists/PFAS8a7"
+tags: [ "vp-5100065" ]
+---
+name: "5100072 — TSCA 8(a)(7) PFAS Chemicals - List Details - SRS | US EPA"
+url: "https://cdxapps.epa.gov/oms-substance-registry-services/substance-list-details/490"
+tags: [ "vp-5100072" ]
+---
+name: "5135801 — How to Access the TSCA Inventory | US EPA"
+url: "https://www.epa.gov/tsca-inventory/how-access-tsca-inventory"
+tags: [ "vp-5135801" ]
+---
+name: "5287465 — SILiAmb schemes - Specific waste streams - Legislation - Portugal"
+url: "https://www.apambiente.pt/residuos/fluxos-especificos-de-residuos"
+tags: [ "vp-5287465" ]
+---
+name: "5289196 — Registry of SVHC intentions until outcome - ECHA"
+navigate: "https://echa.europa.eu/registry-of-svhc-intentions"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-5289196" ]
+---
+name: "5414301 — Priser & villkor – Copyswede"
+url: "https://www.copyswede.se/privatkopieringsersattning/priser-villkor/"
+tags: [ "vp-5414301" ]
+---
+name: "5549728 — List of substances proposed as POPs - ECHA"
+navigate: "https://echa.europa.eu/list-of-substances-proposed-as-pops"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-5549728" ]
+---
+name: "5553536 — SCIP Format - ECHA"
+navigate: "https://www.echa.europa.eu/scip-format"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-5553536" ]
+---
+name: "5608865 — Environment Law No. 2872. | FAOLEX"
+url: "https://www.fao.org/faolex/results/details/en/c/LEX-FAOC007700/"
+tags: [ "vp-5608865" ]
+---
+name: "5608899 — ReSimple | Tarifas"
+url: "https://www.resimple.cl/tarifas/"
+tags: [ "vp-5608899" ]
+---
+name: "5692226 — EUDR Info - Due Diligence Information System (European Commission)"
+url: "https://green-business.ec.europa.eu/deforestation-regulation-implementation/deforestation-due-diligence-registry_en#training-testing-and-user-manuals"
+tags: [ "vp-5692226" ]
+---
+name: "5692268 — EUDR Info - Central guidance page (European Commission)"
+url: "https://green-business.ec.europa.eu/deforestation-regulation-implementation/definitions-and-obligations_en"
+tags: [ "vp-5692268" ]
+---
+name: "5692270 — EUDR Info - Country Benchmarking (European Commission)"
+url: "https://green-business.ec.europa.eu/deforestation-regulation-implementation/benchmarking-partnerships_en"
+tags: [ "vp-5692270" ]
+---
+name: "5693369 — Tarifs et supports - Copie France"
+url: "https://www.copiefrance.fr/fr/faire-sa-declaration/tarifs-et-supports"
+tags: [ "vp-5693369" ]
+---
+name: "5705616 — Hellenic Copyright Organization"
+url: "https://library.opi.gr/en/law-2121-1993/"
+tags: [ "vp-5705616" ]
+---
+name: "5710976 — The Green Dot rates | Fost Plus"
+url: "https://www.fostplus.be/en/members/green-dot-rates"
+tags: [ "vp-5710976" ]
+---
+name: "5720101 — Regeringskansliets rättsdatabaser"
+url: "https://rkrattsbaser.gov.se/sfst?bet=2008:834"
+tags: [ "vp-5720101" ]
+---
+name: "5849318 — AURAEKO Packaging - AURAEKO"
+url: "https://auraeko.pl/en/packaging/"
+tags: [ "vp-5849318" ]
+---
+name: "5868298 — ESPR FAQ"
+navigate: "https://circabc.europa.eu/ui/group/418195ae-4919-45fa-a959-3b695c9aab28/library/25c48e7c-9ce3-41cb-96ac-d2942a8a29d6/details"
+wait_until: load
+wait_for: "main >> nth=0"
+tags: [ "vp-5868298" ]
+---
+name: "5868310 — Price list - Paristokierrätys"
+url: "https://www.paristokierratys.fi/en/producers-extranet/price-list/"
+tags: [ "vp-5868310" ]
+---
+name: "5870270 — Germany WEEE"
+url: "https://www.elektrogesetz.de/bundeskabinett-elektrog4/"
+tags: [ "vp-5870270" ]
+---
+name: "5905357 — EcoRom Updates"
+url: "https://ecoromambalaje.ro/informatii-publice/"
+tags: [ "vp-5905357" ]
+---
+name: "5910805 — JOIN COREPILE | Corepile"
+url: "https://www.corepile.fr/vous-etes/metteurs-sur-le-marche/join-corepile/"
+tags: [ "vp-5910805" ]
+---
+name: "5910807 — COREPILE MEMBER | Corepile"
+url: "https://www.corepile.fr/vous-etes/metteurs-sur-le-marche/corepile-member/"
+tags: [ "vp-5910807" ]
+---
+name: "5917859 — HDS Croatian Composers Society"
+url: "https://www.zamp.hr/korisnici/pregled/64/98/privatno-kopiranje"
+tags: [ "vp-5917859" ]
+---
+name: "5925311 — Price list - sewa"
+url: "https://www.sewa.sk/en/price-list"
+tags: [ "vp-5925311" ]
+---
+name: "5929008 — EcoSystem"
+url: "https://pro.ecosystem.eco/profil/producteur/baremes"
+tags: [ "vp-5929008" ]
+---
+name: "6086882 — Žaliasis taškas fees"
+url: "https://www.zaliasistaskas.lt/ikainiai/"
+tags: [ "vp-6086882" ]
+---
+name: "6089673 — Per- and polyfluoroalkyl substances (PFAS) - Canada.ca"
+url: "https://www.canada.ca/en/health-canada/services/chemical-substances/other-chemical-substances-interest/per-polyfluoroalkyl-substances.html"
+tags: [ "vp-6089673" ]
+---
+name: "6152045 — TSCA Section 8(a)(7) Reporting and Recordkeeping Requirements for Perfluoroalkyl and Polyfluoroalkyl Substances | US EPA"
+url: "https://www.epa.gov/assessing-and-managing-chemicals-under-tsca/tsca-section-8a7-reporting-and-recordkeeping"
+tags: [ "vp-6152045" ]
+---
+name: "6152060 — EU-BATTERIES_REGULATION-ANX_I_VI_ART_13_5 - ECHA"
+navigate: "https://echa.europa.eu/eu-batteries_regulation-anx_i_vi_art_13_5?p_p_id=eucleflegislationlist_WAR_euclefportlet&p_p_lifecycle=0"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-6152060" ]
+---
+name: "6160789 — Batteries and Accumulators Compliance | GreenPak"
+url: "https://www.greenpak.com.mt/Batteriesandaccumulators"
+tags: [ "vp-6160789" ]
+---
+name: "6160828 — Packaging Compliance | GreenPak Malta"
+url: "https://www.greenpak.com.mt/Packaging"
+tags: [ "vp-6160828" ]
+---
+name: "6160834 — WEEE Compliance | GreenPak Malta"
+url: "https://www.greenpak.com.mt/WEEE"
+tags: [ "vp-6160834" ]
+---
+name: "6174557 — The Proposition 65 List - OEHHA"
+url: "https://oehha.ca.gov/proposition-65/proposition-65-list"
+tags: [ "vp-6174557" ]
+---
+name: "6174560 — Proposition 65 - OEHHA"
+url: "https://oehha.ca.gov/proposition-65"
+tags: [ "vp-6174560" ]
+---
+name: "6174840 — End-of-Life Vehicles - European Commission"
+url: "https://environment.ec.europa.eu/topics/waste-and-recycling/end-life-vehicles_en"
+tags: [ "vp-6174840" ]
+---
+name: "6174846 — EU-ELV-ART_2_11 - ECHA Hazardous Substances list"
+navigate: "https://echa.europa.eu/de/eu-end_of_life_vehicles-art_2_11?p_p_id=eucleflegislationlist_WAR_euclefportlet&p_p_lifecycle=0"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-6174846" ]
+---
+name: "6178196 — ３Ｒ政策（METI/経済産業省）Japan RoHS"
+url: "https://www.meti.go.jp/policy/recycle/main/3r_policy/policy/j-moss.html"
+tags: [ "vp-6178196" ]
+---
+name: "6180996 — Siliamb"
+url: "https://apambiente.pt/residuos/documentos"
+tags: [ "vp-6180996" ]
+---
+name: "6180997 — Siliamb Products"
+url: "https://apambiente.pt/residuos/registo-de-produtores-de-produtos"
+tags: [ "vp-6180997" ]
+---
+name: "6206541 — News - Paristokierrätys"
+url: "https://www.paristokierratys.fi/en/news/"
+tags: [ "vp-6206541" ]
+---
+name: "6218598 — PFAS in Products, Maine Department of Environmental Protection"
+url: "https://www.maine.gov/dep/spills/topics/pfas/PFAS-products/"
+tags: [ "vp-6218598" ]
+---
+name: "6222509 — PFAS in products: Currently unavoidable use | Minnesota Pollution Control Agency"
+url: "https://www.pca.state.mn.us/get-engaged/pfas-in-products-currently-unavoidable-use"
+tags: [ "vp-6222509" ]
+---
+name: "6222513 — PFAS in products: Reporting and fees | Minnesota Pollution Control Agency"
+url: "https://www.pca.state.mn.us/get-engaged/pfas-in-products-reporting-and-fees"
+tags: [ "vp-6222513" ]
+---
+name: "6276685 — IEC 62474"
+navigate: "https://std.iec.ch/iec62474/iec62474.nsf/Index?open&q=125415"
+wait_until: load
+wait_for: "iframe, frame >> nth=0"
+tags: [ "vp-6276685" ]
+---
+name: "6310432 — Rates –"
+url: "https://ufh.at/en/our-services-for-you/licensing-and-disposal/rates/"
+tags: [ "vp-6310432" ]
+---
+name: "6310487 — Normative - Ecoem"
+url: "https://www.ecoem.it/normative/#batterie"
+tags: [ "vp-6310487" ]
+---
+name: "6310700 — Normative - Ecoem"
+url: "https://www.ecoem.it/normative/"
+tags: [ "vp-6310700" ]
+---
+name: "6329558 — PFAS Resources for States and other ECOS Members - The Environmental Council of the States (ECOS)"
+url: "https://www.ecos.org/pfas/"
+tags: [ "vp-6329558" ]
+---
+name: "6351528 — CESI China RoHS News"
+url: "https://www.cesi.cn/rohs/page/list.jsp?catalog=/001/001-006"
+tags: [ "vp-6351528" ]
+---
+name: "6367839 — French Sustainability Index"
+url: "https://www.ecologie.gouv.fr/politiques-publiques/indice-durabilite"
+tags: [ "vp-6367839" ]
+---
+name: "6367916 — French Repairability Index"
+url: "https://www.ecologie.gouv.fr/politiques-publiques/indice-reparabilite"
+tags: [ "vp-6367916" ]
+---
+name: "6410635 — EU Deforestation Regulation"
+url: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:C_202501974"
+tags: [ "vp-6410635" ]
+---
+name: "6412521 — Asekol Czech Republic WEEE"
+url: "https://asekol.webflow.io/povinnosti-vyrobcu-a-prodejcu#elektrozarizeni"
+tags: [ "vp-6412521" ]
+---
+name: "6412523 — Asekol Czech Republic Batteries"
+url: "https://asekol.webflow.io/povinnosti-vyrobcu-a-prodejcu#baterie"
+tags: [ "vp-6412523" ]
+---
+name: "6415805 — Circular Materials EPR Compliance Scheme News"
+url: "https://www.circularmaterials.ca/news/"
+tags: [ "vp-6415805" ]
+---
+name: "6416453 — Electronics Recycling Program - Alberta Recycling Management Authority"
+url: "https://www.albertarecycling.ca/stewardship-recycling/electronics/"
+tags: [ "vp-6416453" ]
+---
+name: "6417326 — Heavy Equipment Declarable Substance List (HEDSL) - AEM | Association of Equipment Manufacturers"
+url: "https://www.aem.org/safety-product-leadership/heavy-equipment-declarable-substance-list-hedsl"
+tags: [ "vp-6417326" ]
+---
+name: "6417425 — The Red List - Living Future"
+url: "https://living-future.org/red-list/"
+tags: [ "vp-6417425" ]
+---
+name: "6430838 — Candidate List Package - ECHA"
+navigate: "https://echa.europa.eu/candidate-list-package"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-6430838" ]
+---
+name: "6453843 — Asekol Downloads"
+url: "https://asekol.webflow.io/ke-stazeni#vyrobci-a-prodejci"
+tags: [ "vp-6453843" ]
+---
+name: "6456973 — Circular Energy Fees"
+url: "https://circular-energy.org/epr-fees/"
+tags: [ "vp-6456973" ]
+---
+name: "6456975 — South Africa EPR Regulation"
+url: "https://lawlibrary.org.za/akn/za/act/gn/2020/1184/eng@2024-11-06"
+tags: [ "vp-6456975" ]
+---
+name: "6475025 — PFAS Central"
+url: "https://pfascentral.org/"
+tags: [ "vp-6475025" ]
+---
+name: "6495233 — CPCB | Central Pollution Control Board"
+url: "https://cpcb.nic.in/latest-cpcb.php"
+tags: [ "vp-6495233" ]
+---
+name: "6513024 — Producer News - SK Recycles"
+url: "https://skrecycles.ca/producers/news/"
+tags: [ "vp-6513024" ]
+---
+name: "6513028 — Reporting & Fees - SK Recycles"
+url: "https://skrecycles.ca/producers/reporting-fees/"
+tags: [ "vp-6513028" ]
+---
+name: "6513031 — Fees - SK Recycles"
+url: "https://skrecycles.ca/producers/reporting-fees/fees/"
+tags: [ "vp-6513031" ]
+---
+name: "6513034 — Regulation & Program Plan - SK Recycles"
+url: "https://skrecycles.ca/about/regulation-and-program-plan/"
+tags: [ "vp-6513034" ]
+---
+name: "6513044 — Saskatchewan Packaging and Paper Regulations"
+url: "https://publications.saskatchewan.ca/#/products/120617"
+tags: [ "vp-6513044" ]
+---
+name: "6514850 — Fee Schedule - Recycle BC"
+url: "https://recyclebc.ca/producers/reporting-fees/fee-schedule/"
+tags: [ "vp-6514850" ]
+---
+name: "6514859 — Producer News - Recycle BC"
+url: "https://recyclebc.ca/producers/news/"
+tags: [ "vp-6514859" ]
+---
+name: "6514863 — Reporting & Fees - Recycle BC"
+url: "https://recyclebc.ca/producers/reporting-fees/"
+tags: [ "vp-6514863" ]
+---
+name: "6514865 — Recycling Regulation"
+url: "https://www.bclaws.gov.bc.ca/civix/document/id/lc/statreg/449_2004"
+tags: [ "vp-6514865" ]
+---
+name: "6521217 — EUDR Indicators - FSC Country Score (Risk Assessments)"
+url: "https://www.fsc-eudr-journey.org/fsc-aligned-eudr-risk-assessment"
+tags: [ "vp-6521217" ]
+---
+name: "6521220 — EUDR Indicators - Coruption Perceptions Index (Transparency.org)"
+url: "https://www.transparency.org/en/cpi/2024"
+tags: [ "vp-6521220" ]
+---
+name: "6521233 — EUDR Indicators - Expert Group Conclusion (EU)"
+url: "https://green-forum.ec.europa.eu/deforestation-regulation-implementation/eudr-cooperation-and-partnerships/country-classification-list_en"
+tags: [ "vp-6521233" ]
+---
+name: "6521271 — EUDR Indicators - Indigenous peoples, satellite (LandMark)"
+url: "https://www.landmarkmap.org/data-methods/access-data"
+tags: [ "vp-6521271" ]
+---
+name: "6521276 — EUDR Indicators - Timber Species Risk (WWF)"
+url: "https://www.woodrisk.org/assess-risk/species"
+tags: [ "vp-6521276" ]
+---
+name: "6525036 — India RoHS - CPCB e-waste rules"
+url: "https://cpcb.nic.in/rules-6/"
+tags: [ "vp-6525036" ]
+---
+name: "6710184 — Liste der Beschränkungen - ECHA"
+navigate: "https://echa.europa.eu/de/substances-restricted-under-reach"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-6710184" ]
+---
+name: "6711808 — Take back systems - Reclay Österreich"
+url: "https://reclay-group.com/at/en/services/take-back-systems/"
+tags: [ "vp-6711808" ]
+---
+name: "6715498 — Ako sa stať klientom | NATUR-PACK, a.s."
+url: "https://www.naturpack.sk/sluzby/vyrobcovia/ako-sa-stat-klientom/"
+tags: [ "vp-6715498" ]
+---
+name: "6715506 — Základné povinnosti | NATUR-PACK, a.s."
+url: "https://www.naturpack.sk/sluzby/vyrobcovia/obaly/zakladne-povinnosti/"
+tags: [ "vp-6715506" ]
+---
+name: "6717343 — Registration of producers packaging section"
+url: "https://www.miteco.gob.es/es/calidad-y-evaluacion-ambiental/temas/prevencion-y-gestion-residuos/prevencion-y-gestion-residuos/registro-productores-producto-seccion-envases.html"
+tags: [ "vp-6717343" ]
+---
+name: "6726933 — UK RoHS"
+url: "https://www.legislation.gov.uk/uksi/2012/3032/"
+tags: [ "vp-6726933" ]
+---
+name: "6727349 — Tariff and appliance list – SENS eRecycling"
+url: "https://www.erecycling.ch/en/vrg-partner/tarife-und-geraeteliste.html"
+tags: [ "vp-6727349" ]
+---
+name: "6727379 — Downloads for partners – SENS eRecycling"
+url: "https://www.erecycling.ch/en/wissenswertes/downloads-partner.html"
+tags: [ "vp-6727379" ]
+---
+name: "6727566 — SENS Switzerland WEEE Regulation"
+url: "https://www.erecycling.ch/en/wissenswertes/downloads-partner.html#2"
+tags: [ "vp-6727566" ]
+---
+name: "6794445 — Living Building Challenge - Red List"
+url: "https://living-future.org/red-list/#2"
+tags: [ "vp-6794445" ]
+---
+name: "6834415 — Léko tariffs"
+url: "https://www.leko-organisme.fr/en/pourquoi-leko/"
+tags: [ "vp-6834415" ]
+---
+name: "6840783 — Procircular Fees"
+url: "https://procircular.es/en/our-operation/"
+tags: [ "vp-6840783" ]
+---
+name: "6840788 — Procircular News and webinars"
+url: "https://procircular.es/en/news/"
+tags: [ "vp-6840788" ]
+---
+name: "6852377 — Tariff and terms of contract | Bulecopack Jsc."
+url: "https://www.bulecopack.com/en/dogovor"
+tags: [ "vp-6852377" ]
+---
+name: "6910501 — EUDR Info - API details for Noud (EU Circabc)"
+navigate: "https://circabc.europa.eu/ui/group/34861680-e799-4d7c-bbad-da83c45da458/library/6d251428-9ddc-44df-9e2b-2540fd82f8eb/details"
+wait_until: load
+wait_for: "main >> nth=0"
+tags: [ "vp-6910501" ]
+---
+name: "6952701 — Ecobulpack Tariffs"
+url: "https://www.ecobulpack.bg/en/information-for-companies/"
+tags: [ "vp-6952701" ]
+---
+name: "7189052 — Emballageretur fees"
+url: "https://retur.dk/en/priser-og-miljobidrag/priser-emballage"
+tags: [ "vp-7189052" ]
+---
+name: "7190111 — Price list - Environ Association"
+url: "https://environ.ro/en/price-list/"
+tags: [ "vp-7190111" ]
+---
+name: "7191666 — Elektro Recycling Austria"
+url: "https://era-gmbh.at/en/meta/downloads/"
+tags: [ "vp-7191666" ]
+---
+name: "7191855 — ECO Synergy - Transparenta preturi si clienti"
+url: "https://ecosynergy.ro/informatiipublice/"
+tags: [ "vp-7191855" ]
+---
+name: "7191886 — Legislatie de mediu pentru OIREP - Modificari si actualizari"
+url: "https://ecosynergy.ro/legislatie-otr-mediu/"
+tags: [ "vp-7191886" ]
+---
+name: "7197185 — Tarife gestionare DBA - SNRB | Sistemul Naţional De Reciclare Al Bateriilor"
+url: "https://snrb.org/tarife-gestionare-dba/"
+tags: [ "vp-7197185" ]
+---
+name: "7228552 — MAI Israel WEEE/Batteries"
+url: "https://mai.org.il/%d7%9e%d7%97%d7%99%d7%a8%d7%95%d7%9f-%d7%9e-%d7%90-%d7%99/"
+tags: [ "vp-7228552" ]
+---
+name: "7251443 — Annual Producer Meetings & Fee Consultations - Knowledge Base"
+url: "https://knowledge.werecycle.ca/?title=Producers/03_Fees/Annual_Producer_Meetings_%26_Fee_Consultations"
+tags: [ "vp-7251443" ]
+---
+name: "7280329 — Türkiye RoHS gazette (main updates)"
+url: "https://www.resmigazete.gov.tr/"
+tags: [ "vp-7280329" ]
+---
+name: "7332498 — Interzero Croatia News"
+url: "https://epr.interzero.hr/blog/"
+tags: [ "vp-7332498" ]
+---
+name: "7383164 — Exemptions list - validity and rolling plan"
+url: "https://environment.ec.europa.eu/document/f4bd701f-7c2c-4d52-9a03-dc91866e6c61_en"
+tags: [ "vp-7383164" ]
+---
+name: "7429652 — Prices - Ecoembes Companies"
+url: "https://ecoembesempresas.com/en/prices"
+tags: [ "vp-7429652" ]
+---
+name: "7550835 — Elektronikos gamintoju ir importuotoju organizacija Lithuania WEEE and Battery Categories and Information"
+url: "https://eei.lt/gamintojams-ir-importuotojams/"
+tags: [ "vp-7550835" ]
+---
+name: "7550856 — Elektronikos gamintoju ir importuotoju organizacija Lithuania WEEE and Battery Fees"
+url: "https://eei.lt/kainu-skaiciuokle/"
+tags: [ "vp-7550856" ]
+---
+name: "7550943 — VIII-787 Lithuania Law on Waste Management"
+url: "https://e-seimas.lrs.lt/portal/legalActEditions/lt/TAD/TAIS.59267"
+tags: [ "vp-7550943" ]
+---
+name: "7791333 — Electrical and electronic equipment (EEE) covered by the WEEE Regulations - GOV.UK"
+url: "https://www.gov.uk/government/publications/electrical-and-electronic-equipment-eee-covered-by-the-weee-regulations/electrical-and-electronic-equipment-eee-covered-by-the-weee-regulations"
+tags: [ "vp-7791333" ]
+---
+name: "7791338 — Electrical and electronic equipment (EEE) covered by the WEEE Regulations - GOV.UK"
+url: "https://www.gov.uk/government/publications/electrical-and-electronic-equipment-eee-covered-by-the-weee-regulations/electrical-and-electronic-equipment-eee-covered-by-the-weee-regulations#choose-the-most-appropriate-category-for-your-product"
+tags: [ "vp-7791338" ]
+---
+name: "7792719 — New York PFAS - NYSDEC"
+url: "https://dec.ny.gov/environmental-protection/per-and-polyfluoroalkyl-substances-pfas"
+tags: [ "vp-7792719" ]
+---
+name: "7792897 — RLG WEEE - Romania Tariffs"
+url: "https://rev-log.com/ro/rlg-systems-romania/"
+tags: [ "vp-7792897" ]
+---
+name: "7810112 — California WEEE Fees"
+url: "https://cdtfa.ca.gov/taxes-and-fees/special-taxes-and-fees-tax-rates/#elecrecyclefee"
+tags: [ "vp-7810112" ]
+---
+name: "7810208 — California Electronic Waste"
+url: "https://calrecycle.ca.gov/Electronics/CEW/"
+tags: [ "vp-7810208" ]
+---
+name: "7810233 — California Electronic Waste Covered Battery-Embedded Products"
+url: "https://calrecycle.ca.gov/electronics/embeddedbatteries/"
+tags: [ "vp-7810233" ]
+---
+name: "7817237 — California Electronic Waste Recycling Act Reporting Guidance"
+url: "https://www2.calrecycle.ca.gov/Docs/Publications/Details/1250"
+tags: [ "vp-7817237" ]
+---
+name: "7820135 — Stichting OPEN"
+url: "https://www.stichting-open.org/en/producers-importers/"
+tags: [ "vp-7820135" ]
+---
+name: "7820182 — El-Kretsen"
+url: "https://www.el-kretsen.se/product-list-and-fees?lang=en"
+tags: [ "vp-7820182" ]
+---
+name: "7885990 — EUDR Info - FAQs (EU Circabc)"
+navigate: "https://circabc.europa.eu/ui/group/34861680-e799-4d7c-bbad-da83c45da458/library/e126f816-844b-41a9-89ef-cb2a33b6aa56/details#2"
+wait_until: load
+wait_for: "main >> nth=0"
+tags: [ "vp-7885990" ]
+---
+name: "7897696 — Refashion France Textiles - Categories and Fees"
+url: "https://pro.refashion.fr/metteur-en-marche/faire-mes-declarations"
+tags: [ "vp-7897696" ]
+---
+name: "7900951 — PFAS Regulatory Programs Summary"
+url: "https://pfas-1.itrcweb.org/external-data-tables/"
+tags: [ "vp-7900951" ]
+---
+name: "7929983 — Program Fees - Resource Productivity and Recovery Authority RPRA Packaging"
+url: "https://rpra.ca/program-fees/#how-much-are-fees"
+tags: [ "vp-7929983" ]
+---
+name: "7936287 — Producers & importers - Stichting UPV Textiel - Fee"
+url: "https://www.stichtingupvtextiel.nl/en/producers/"
+tags: [ "vp-7936287" ]
+---
+name: "7937666 — Regulations - Stichting UPV Textiel"
+url: "https://www.stichtingupvtextiel.nl/en/regulations/"
+tags: [ "vp-7937666" ]
+---
+name: "7937745 — Netherlands Textiles EPR Regulation"
+url: "https://zoek.officielebekendmakingen.nl/stb-2023-132.html"
+tags: [ "vp-7937745" ]
+---
+name: "7941194 — VerpackG - Germany Packaging Regulation"
+url: "https://www.gesetze-im-internet.de/verpackg/BJNR223410017.html"
+tags: [ "vp-7941194" ]
+---
+name: "7959669 — MMA – Ministerio del Medio Ambiente"
+url: "https://mma.gob.cl/"
+tags: [ "vp-7959669" ]
+---
+name: "7993611 — ECHA CHEM main page"
+navigate: "https://chem.echa.europa.eu/"
+wait_until: load
+wait_for: "table tbody tr >> nth=0"
+tags: [ "vp-7993611" ]
+---
+name: "8210516 — Tracking PFAS legislation across the US | Manufacturing Dive"
+url: "https://www.manufacturingdive.com/news/tracking-pfas-forever-chemicals-bills-legislation-us-states/749829/"
+tags: [ "vp-8210516" ]
+---
+name: "8223405 — Packaging Declarations 2026 - Green Dot Cyprus"
+url: "https://greendot.com.cy/en/green-dot-member-declarations/packaging-statements-2026/"
+tags: [ "vp-8223405" ]
+---
+name: "8396995 — Adelphe - Fees"
+url: "https://www.adelphe.fr/combien-ca-coute/"
+tags: [ "vp-8396995" ]
+---
+name: "8438186 — Spain MoE - Annual information on packages placed on the national market"
+url: "https://sede.miteco.gob.es/portal/site/seMITECO/ficha-procedimiento?procedure_suborg_responsable=11&procedure_etiqueta_pdu=null&procedure_id=964&by=theme"
+tags: [ "vp-8438186" ]
+---
+name: "8438909 — VANA's base prices for handling packaging | VANA"
+url: "https://www.vana.dk/en/membership/prices/vanas-base-prices/"
+tags: [ "vp-8438909" ]
+---
+name: "8460260 — Extended Producer Responsibility for Packaging, Waste Management, Maine Department of Environmental Protection"
+url: "https://www.maine.gov/dep/waste/recycle/epr.html"
+tags: [ "vp-8460260" ]
+---
+name: "8604334 — North American Industry Classification System (NAICS) U.S. Census Bureau"
+url: "https://www.census.gov/naics/#q5?48967"
+tags: [ "vp-8604334" ]
+---
+name: "8615358 — MOENV Taiwan Packaging registration and declaration documents"
+url: "https://recycle1.moenv.gov.tw/sys/Business/doc/DocDownload.aspx"
+tags: [ "vp-8615358" ]
+---
+name: "8615426 — MOENV Taiwan Packaging - Latest News"
+url: "https://recycle1.moenv.gov.tw/"
+tags: [ "vp-8615426" ]
+---
+name: "8626259 — Legislation | ENVI - PAK"
+url: "https://envipak.sk/en/legislative"
+tags: [ "vp-8626259" ]
+---
+name: "8693410 — Latest news | Ecosurety"
+url: "https://www.ecosurety.com/news"
+tags: [ "vp-8693410" ]
+---
+name: "8882904 — Éco Entreprises Québec Fees"
+url: "https://www.eeq.ca/entreprises-tout-sur-votre-role/grilles-de-taux-utiles-pour-votre-declaration"
+tags: [ "vp-8882904" ]
+---
+name: "8970567 — Device Import/Production Tariff | SOZA"
+url: "https://www.soza.sk/en/music-users/device-importproduction-tariff"
+tags: [ "vp-8970567" ]
+---
+name: "9040811 — EU Digital Product Passports - Main Web Page"
+url: "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport_en#what-is-a-digital-product-passport"
+tags: [ "vp-9040811" ]
+---
+name: "9040814 — EU Digital Product Passports - The DPP Registry Information Page"
+url: "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport/dpp-registry_en"
+tags: [ "vp-9040814" ]
+---
+name: "9040833 — EU Digital Product Passports - Iron and Steel Information Page"
+url: "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport/iron-steel_en"
+tags: [ "vp-9040833" ]
+---
+name: "9040838 — EU Digital Product Passports - Batteries Information Page"
+url: "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport/batteries_en"
+tags: [ "vp-9040838" ]
+---
+name: "9040846 — EU Digital Product Passports - Textile Apparel Information Page"
+url: "https://single-market-economy.ec.europa.eu/single-market/digital-product-passport/textile-apparel_en"
+tags: [ "vp-9040846" ]
