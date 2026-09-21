@@ -146,12 +146,12 @@ jobs:
           CHANGED=$(grep -c 'CHANGED:' last-report.txt || true)
           ERRORS=$(grep -c 'ERROR:' last-report.txt || true)
           {
-            echo "## URLWATCH monitor (the newer one, built on urlwatch)"
+            echo "## URL-Watch (Option B) — the urlwatch-based monitor"
             echo ""
             echo "$(TZ=Europe/London date '+%A %d %B %Y, %H:%M %Z')"
             echo ""
-            echo "The other monitor emails under CUSTOM MONITOR, from the"
-            echo "AI-Regulatory-Monitoring repository."
+            echo "Option A is the original bespoke monitor, which emails under"
+            echo "Custom Monitor (Option A) from the Custom-Monitor-Option-A repo."
             echo ""
             echo "- Sources changed: ${CHANGED}"
             echo "- Sources erroring: ${ERRORS}"
@@ -164,7 +164,7 @@ jobs:
             echo '```'
           } > issue-body.md
           gh issue create \
-            --title "URLWATCH — ${CHANGED} changed, ${ERRORS} erroring — $(TZ=Europe/London date '+%d %b %Y')" \
+            --title "URL-Watch (Option B) — ${CHANGED} changed, ${ERRORS} erroring — $(TZ=Europe/London date '+%d %b %Y')" \
             --body-file issue-body.md
 
       - name: Save the cache, page and report
