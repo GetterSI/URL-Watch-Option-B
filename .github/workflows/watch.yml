@@ -98,6 +98,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      # THE SNAPSHOT CACHE DOES NOT LIVE IN GIT.
+      #
+      # urlwatch's cache.db grew by roughly 45 MB per run - minidb appends a
+      # row for every changed page and keeps the history - and on 19 Sep 2026
+      # it passed GitHub's hard 100 MB per-file limit. Every run from then on
+      # was rejected at push with GH001 ("File cache.db is 139.99 MB"), so no
+      # state was saved and every morning's diff was measured against the
+      # 18 Sep snapshot instead of against yesterday. The cache belongs in the
+      # Actions cache, which is built for large regenerable state and never
+      # touches the repository.
+      #
+      # restore/save are used as separate actions rather than actions/cache so
+      # the save can run with if: always() - a run must never alert and then
+      # throw away the state the alert was based on.
+      - name: Restore the snapshot cache
+        uses: actions/cache/restore@v4
+        with:
+          path: cache.db
+          key: urlwatch-cache-${{ github.run_id }}
+          restore-keys: urlwatch-cache-
+
       - name: Install the pinned engine
         run: |
           set -o pipefail
@@ -122,6 +143,23 @@ jobs:
             2>&1 | tee last-report.txt || true
           echo "urlwatch exit code: ${PIPESTATUS[0]}"
           echo "report bytes: $(wc -c < last-report.txt)"
+
+      - name: Prune old snapshots
+        # --gc-cache is urlwatch's own flag: keep the latest snapshot per job,
+        # delete every older one, drop jobs no longer in urls.yaml, then VACUUM
+        # so the file actually shrinks. It is a standalone action that exits
+        # immediately, so it cannot be folded into the run above.
+        if: always()
+        run: |
+          set -o pipefail
+          BEFORE=$(stat -c%s cache.db)
+          urlwatch --config urlwatch.yaml --urls urls.yaml --cache cache.db \
+            --gc-cache 2>&1 | tail -3
+          AFTER=$(stat -c%s cache.db)
+          echo "cache.db: $((BEFORE / 1048576)) MB -> $((AFTER / 1048576)) MB"
+          if [ "$AFTER" -gt 1073741824 ]; then
+            echo "::warning::cache.db is $((AFTER / 1048576)) MB after pruning. The Actions cache allows 10 GB per repository so this is not yet fatal, but it is growing and worth a look."
+          fi
 
       - name: Build the page
         if: always()
@@ -167,9 +205,10 @@ jobs:
             --title "URL-Watch (Option B) — ${CHANGED} changed, ${ERRORS} erroring — $(TZ=Europe/London date '+%d %b %Y')" \
             --body-file issue-body.md
 
-      - name: Save the cache, page and report
-        # if: always() so a run can never alert and then throw away the state
-        # the alert was based on.
+      - name: Save the page and report
+        # cache.db is deliberately NOT in this list - see the restore step.
+        # Only the two small text artefacts are committed, so a push can no
+        # longer be rejected for size.
         if: always()
         run: |
           set -o pipefail
@@ -177,14 +216,14 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           for attempt in 1 2 3; do
             git fetch origin main
-            for f in cache.db index.html last-report.txt; do
+            for f in index.html last-report.txt; do
               cp -f "$f" "/tmp/$f" 2>/dev/null || true
             done
             git reset --hard origin/main
-            for f in cache.db index.html last-report.txt; do
+            for f in index.html last-report.txt; do
               cp -f "/tmp/$f" "$f" 2>/dev/null || true
             done
-            git add cache.db index.html last-report.txt 2>/dev/null || true
+            git add index.html last-report.txt 2>/dev/null || true
             if git diff --quiet --cached; then
               echo "Nothing to commit."
               exit 0
@@ -197,5 +236,15 @@ jobs:
             echo "Push rejected, retrying (${attempt}/3)."
             sleep 5
           done
-          echo "::error::Could not push after 3 attempts. This run's state was NOT saved."
+          echo "::error::Could not push after 3 attempts. The page and report were NOT saved. The snapshot cache is unaffected - it is stored separately."
           exit 1
+
+      - name: Store the snapshot cache
+        # if: always() so the cache is kept even when an earlier step failed.
+        # git reset --hard above cannot touch cache.db: it is untracked and
+        # gitignored.
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cache.db
+          key: urlwatch-cache-${{ github.run_id }}
