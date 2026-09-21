@@ -1,0 +1,12 @@
+# urlwatch's snapshot cache. NEVER commit this.
+#
+# It grew by roughly 45 MB per run and hit GitHub's hard 100 MB per-file
+# limit on 19 Sep 2026, at which point every run was rejected at push and
+# stopped saving its state - so each morning diffed against a three-day-old
+# snapshot without saying so. It lives in the Actions cache instead; see the
+# restore/save steps in .github/workflows/watch.yml.
+cache.db
+
+# Local scratch
+__pycache__/
+*.pyc
