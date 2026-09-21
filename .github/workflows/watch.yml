@@ -1,0 +1,289 @@
+name: Regulatory Watch
+
+# 8am BRITISH time, all year round.
+#
+# GitHub cron is UTC only, so "8am in Britain" is 07:00 UTC during BST and
+# 08:00 UTC during GMT. A single cron cannot follow the clock change. So both
+# fire, and the gate job below lets exactly one through — whichever is actually
+# 08:xx in Europe/London on the day.
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 08:00 London while BST (late Mar - late Oct)
+    - cron: "0 8 * * *"   # 08:00 London while GMT (late Oct - late Mar)
+  workflow_dispatch:
+    inputs:
+      quiet:
+        description: "Re-baseline: store snapshots WITHOUT emailing. Use after any config or filter change."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: regulatory-watch
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - id: check
+        run: |
+          HOUR=$(TZ=Europe/London date +%H)
+          echo "London time now: $(TZ=Europe/London date '+%Y-%m-%d %H:%M %Z')"
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run - proceeding."
+          elif [ "$HOUR" = "08" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "It is 08:xx in London - this is the run that counts."
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "It is $HOUR:xx in London, not 08 - the other cron covers today."
+          fi
+
+  validate:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate the job list, the config and the renderer
+        run: |
+          set -o pipefail
+          python - <<'PY'
+          import yaml, collections
+          docs = [d for d in yaml.safe_load_all(open("urls.yaml", encoding="utf-8")) if d]
+          assert len(docs) == 218, "expected 218 jobs, found %d" % len(docs)
+          locs = [d.get("url") or d.get("navigate") for d in docs]
+          assert all(locs), "a job has no url/navigate key"
+          dupes = sorted(u for u, c in collections.Counter(locs).items() if c > 1)
+          assert not dupes, "urlwatch will refuse to start - duplicate locations: %r" % dupes
+          names = [d.get("name") for d in docs]
+          nd = [n for n, c in collections.Counter(names).items() if c > 1]
+          assert not nd, "duplicate job names: %r" % nd[:5]
+          br = [d for d in docs if d.get("navigate")]
+          for d in br:
+              assert d.get("wait_until") == "load", "browser job on networkidle: %s" % d["name"]
+              assert d.get("wait_for"), "browser job with no wait_for: %s" % d["name"]
+          for vid in (2913455, 6514863, 6840788, 7280329, 7937745):
+              assert any(str(n).startswith(str(vid)) for n in names), \
+                  "recovered source %s is missing again" % vid
+          c = yaml.safe_load(open("urlwatch.yaml", encoding="utf-8"))
+          assert c["display"]["new"] is False, "baseline guard missing"
+          assert c["report"]["text"]["footer"] is False, "footers must stay off"
+          for kind in ("url", "browser"):
+              assert c["job_defaults"][kind].get("useragent"), "%s jobs need a useragent" % kind
+          print("OK: %d jobs, %d browser jobs, config sane" % (len(docs), len(br)))
+          PY
+          python -m py_compile tools/render_page.py
+          echo "renderer compiles"
+
+  watch:
+    needs: [gate, validate]
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # THE SNAPSHOT CACHE DOES NOT LIVE IN GIT.
+      #
+      # urlwatch's cache.db grew by roughly 45 MB per run - minidb appends a
+      # row for every changed page and keeps the history - and on 19 Sep 2026
+      # it passed GitHub's hard 100 MB per-file limit. Every run from then on
+      # was rejected at push with GH001 ("File cache.db is 139.99 MB"), so no
+      # state was saved and every morning's diff was measured against the
+      # 18 Sep snapshot instead of against yesterday. The cache belongs in the
+      # Actions cache, which is built for large regenerable state and never
+      # touches the repository.
+      #
+      # restore/save are used as separate actions rather than actions/cache so
+      # the save can run with if: always() - a run must never alert and then
+      # throw away the state the alert was based on.
+      - name: Restore the snapshot cache
+        uses: actions/cache/restore@v4
+        with:
+          path: cache.db
+          key: urlwatch-cache-${{ github.run_id }}
+          restore-keys: urlwatch-cache-
+
+      - name: Install the pinned engine
+        run: |
+          set -o pipefail
+          pip install \
+            urlwatch==2.29 \
+            playwright==1.63.0 \
+            minidb==2.0.8 \
+            pyyaml==6.0.3 \
+            requests==2.34.2 \
+            keyring==25.7.0 2>&1 | tail -3
+          python -m playwright install --with-deps chromium 2>&1 | tail -2
+
+      - name: Run urlwatch
+        # THE REPORT IS REDIRECTED TO A FILE. IT IS NEVER PIPED.
+        #
+        # On 18 Sep 2026 this step piped urlwatch into tee and urlwatch died
+        # inside reporters.py with
+        #   BlockingIOError: [Errno 11] write could not complete without blocking
+        # The runner's stdout pipe applied backpressure faster than urlwatch
+        # could write. 85 changes were detected and only 3 diffs made it into
+        # the report - and the trailing "|| true" swallowed the whole thing, so
+        # the run looked clean and the email went out nearly empty. A file has
+        # no such limit.
+        #
+        # urlwatch exits non-zero when ANY job errors, which is information
+        # rather than a broken run, so the exit code is recorded, not acted on.
+        # A traceback or a truncated report IS acted on - loudly. Every step
+        # after this one carries if: always(), so the state is still saved.
+        run: |
+          set +e
+          touch cache.db
+          urlwatch --config urlwatch.yaml --urls urls.yaml --cache cache.db \
+            > last-report.txt 2>&1
+          RC=$?
+          set -e
+          echo "urlwatch exit code: ${RC}"
+          echo "report bytes: $(wc -c < last-report.txt)"
+          SUM=$(grep -cE '^[0-9]+\. CHANGED:' last-report.txt || true)
+          DET=$(grep -cE '^CHANGED: ' last-report.txt || true)
+          echo "changes listed: ${SUM}, diffs written: ${DET}"
+          # Do NOT grep the whole file for "Traceback". urlwatch prints one
+          # INSIDE an ERROR block for every job that raises, and Playwright
+          # wait_for timeouts do that on several sources every run - the first
+          # version of this guard failed a perfectly healthy run for exactly
+          # that reason. A complete report always ENDS with a separator line;
+          # the crashed 18 Sep one ended mid-exception.
+          if [ -s last-report.txt ]; then
+            LAST=$(grep -v '^[[:space:]]*$' last-report.txt | tail -1)
+            if ! printf '%s\n' "$LAST" | grep -qE '^-{100}$'; then
+              echo "::error::The report does not end cleanly - urlwatch probably died while writing it. Last line: ${LAST}"
+              exit 1
+            fi
+          fi
+          if [ "${SUM}" -gt 0 ] && [ "${DET}" -lt "${SUM}" ]; then
+            echo "::error::Report truncated: ${SUM} changes listed but only ${DET} diffs written."
+            exit 1
+          fi
+
+      - name: Prune old snapshots
+        # --gc-cache is urlwatch's own flag: keep the latest snapshot per job,
+        # delete every older one, drop jobs no longer in urls.yaml, then VACUUM
+        # so the file actually shrinks. It is a standalone action that exits
+        # immediately, so it cannot be folded into the run above.
+        if: always()
+        run: |
+          set -o pipefail
+          BEFORE=$(stat -c%s cache.db)
+          urlwatch --config urlwatch.yaml --urls urls.yaml --cache cache.db \
+            --gc-cache 2>&1 | tail -3
+          AFTER=$(stat -c%s cache.db)
+          echo "cache.db: $((BEFORE / 1048576)) MB -> $((AFTER / 1048576)) MB"
+          if [ "$AFTER" -gt 1073741824 ]; then
+            echo "::warning::cache.db is $((AFTER / 1048576)) MB after pruning. The Actions cache allows 10 GB per repository so this is not yet fatal, but it is growing and worth a look."
+          fi
+
+      - name: Build the page
+        if: always()
+        run: python tools/render_page.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Email on changes
+        # A GitHub issue emails the repository owner automatically, so no SMTP
+        # credentials need to exist in this repo at all.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUIET: ${{ inputs.quiet }}
+        run: |
+          if [ "$QUIET" = "true" ]; then
+            echo "Re-baseline run: snapshots stored, no email sent."
+            exit 0
+          fi
+          if [ ! -s last-report.txt ] || ! grep -q '[^[:space:]]' last-report.txt; then
+            echo "Nothing changed. No issue, no email."
+            exit 0
+          fi
+          # Anchored to the numbered summary list. An unanchored
+          # grep -c 'CHANGED:' also matches the "CHANGED: <title>" header above
+          # every diff block, so it counted each changed page twice - once in
+          # the summary, once in its own detail block. That is why 18 Sep was
+          # emailed as "88 changed" when the summary listed 85: 85 + the 3
+          # diff blocks that survived the crash.
+          CHANGED=$(grep -cE '^[0-9]+\. CHANGED:' last-report.txt || true)
+          ERRORS=$(grep -cE '^[0-9]+\. ERROR:' last-report.txt || true)
+          {
+            echo "## URL-Watch (Option B) — the urlwatch-based monitor"
+            echo ""
+            echo "$(TZ=Europe/London date '+%A %d %B %Y, %H:%M %Z')"
+            echo ""
+            echo "Option A is the original bespoke monitor, which emails under"
+            echo "Custom Monitor (Option A) from the Custom-Monitor-Option-A repo."
+            echo ""
+            echo "- Sources changed: ${CHANGED}"
+            echo "- Sources erroring: ${ERRORS}"
+            echo ""
+            echo "Full results: https://gettersi.github.io/${GITHUB_REPOSITORY#*/}/"
+            echo ""
+            echo '```'
+            head -c 55000 last-report.txt
+            echo ''
+            echo '```'
+          } > issue-body.md
+          gh issue create \
+            --title "URL-Watch (Option B) — ${CHANGED} changed, ${ERRORS} erroring — $(TZ=Europe/London date '+%d %b %Y')" \
+            --body-file issue-body.md
+
+      - name: Save the page and report
+        # cache.db is deliberately NOT in this list - see the restore step.
+        # Only the two small text artefacts are committed, so a push can no
+        # longer be rejected for size.
+        if: always()
+        run: |
+          set -o pipefail
+          git config user.name  "regulatory-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            for f in index.html last-report.txt; do
+              cp -f "$f" "/tmp/$f" 2>/dev/null || true
+            done
+            git reset --hard origin/main
+            for f in index.html last-report.txt; do
+              cp -f "/tmp/$f" "$f" 2>/dev/null || true
+            done
+            git add index.html last-report.txt 2>/dev/null || true
+            if git diff --quiet --cached; then
+              echo "Nothing to commit."
+              exit 0
+            fi
+            git commit -m "Watch run: $(TZ=Europe/London date +%Y-%m-%d)"
+            if git push; then
+              echo "Saved on attempt ${attempt}."
+              exit 0
+            fi
+            echo "Push rejected, retrying (${attempt}/3)."
+            sleep 5
+          done
+          echo "::error::Could not push after 3 attempts. The page and report were NOT saved. The snapshot cache is unaffected - it is stored separately."
+          exit 1
+
+      - name: Store the snapshot cache
+        # if: always() so the cache is kept even when an earlier step failed.
+        # git reset --hard above cannot touch cache.db: it is untracked and
+        # gitignored.
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cache.db
+          key: urlwatch-cache-${{ github.run_id }}
